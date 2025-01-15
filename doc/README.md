@@ -99,11 +99,11 @@ Please keep the `manpage-urls.json` file alphabetically sorted.
 
 A few markups for other kinds of literals are also available:
 
-- `` {command}`rm -rfi` ``
-- `` {env}`XDG_DATA_DIRS` ``
-- `` {file}`/etc/passwd` ``
-- `` {option}`networking.useDHCP` ``
-- `` {var}`/etc/passwd` ``
+- `` {command}`rm -rfi` `` for shell commands
+- `` {env}`XDG_DATA_DIRS` `` for environment variables
+- `` {file}`/etc/passwd` `` for filesystem paths
+- `` {option}`networking.useDHCP` `` for module options
+- `` {var}`/etc/passwd` `` for Nix code literals
 
 These literal kinds are used mostly in NixOS option documentation.
 
