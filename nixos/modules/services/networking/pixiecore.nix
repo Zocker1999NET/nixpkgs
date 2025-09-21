@@ -31,6 +31,8 @@ in
         type = types.enum [
           "api"
           "boot"
+          "bootipv6"
+          "ipv6api"
           "quick"
         ];
       };
@@ -142,10 +144,11 @@ in
         AmbientCapabilities = [ "cap_net_bind_service" ] ++ optional cfg.dhcpNoBind "cap_net_raw";
         ExecStart =
           let
+            inherit (lib.strings) hasPrefix hasSuffix;
             argString =
-              if cfg.mode == "boot" then
+              if hasPrefix "boot" cfg.mode then
                 [
-                  "boot"
+                  cfg.mode
                   cfg.kernel
                 ]
                 ++ optional (cfg.initrd != "") cfg.initrd
@@ -155,14 +158,16 @@ in
                 ]
               else if cfg.mode == "quick" then
                 [
-                  "quick"
+                  cfg.mode
                   cfg.quick
                 ]
-              else
+              else if hasSuffix "api" cfg.mode then
                 [
-                  "api"
+                  cfg.mode
                   cfg.apiServer
-                ];
+                ]
+              else
+                builtins.throw "unsupported pixiecore mode: ${cfg.mode}";
           in
           ''
             ${pkgs.pixiecore}/bin/pixiecore \
