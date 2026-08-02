@@ -1722,6 +1722,7 @@ rec {
       # [6]: <https://docs.python.org/3.14/reference/lexical_analysis.html#escape-sequences>
       # [7]: <https://github.com/NixOS/nix/issues/1307>
       replacementCharacters = {
+        "\t" = "\\t";
         "\n" = "\\n";
         "\r" = "\\r";
         "'" = "\\'";
@@ -1734,7 +1735,7 @@ rec {
         in
         if replacementCharacters ? ${byte} then
           replacementCharacters.${byte}
-        else if byteOrdinal < 128 then
+        else if byteOrdinal >= 32 && byteOrdinal < 128 then
           byte
         else
           "\\x${toTwoDigitHexString byteOrdinal}";
