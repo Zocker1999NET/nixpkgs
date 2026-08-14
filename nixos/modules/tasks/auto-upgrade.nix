@@ -71,12 +71,22 @@ in
 
       upgrade = lib.mkOption {
         type = lib.types.bool;
-        default = true;
-        apply = v: v && cfg.channel == null;
+        default = lib.length sourceOptionsSet == 0;
+        defaultText = lib.pipe sourceOptions [
+          (map (x: "config.${lib.showAttrPath myPath}.${x} == null"))
+          (builtins.concatStringsSep " && ")
+          lib.literalExpression
+        ];
         description = ''
-          Disable adding the `--upgrade` parameter when `channel`
-          is not set, such as when upgrading to the latest version
-          of a flake honouring its lockfile.
+          Whether to add the `--upgrade` flag to {command}`nixos-rebuild`,
+          which will update the root user's 'nixos' channel before building the new system generation.
+          See {command}`nixos-rebuild --help` for more information about the `--upgrade` flag.
+
+          In most cases, this only has a real effect when using channels
+          with {option}`system.autoUpgrade.channel` set to null.
+
+          Otherwise, {command}`nixos-rebuild` will always use the newest available system configuration
+          as determined by the given channel, or flake (lock).
         '';
       };
 
