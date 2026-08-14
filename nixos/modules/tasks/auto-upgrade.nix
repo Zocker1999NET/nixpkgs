@@ -5,8 +5,16 @@
   ...
 }:
 let
+  myPath = [
+    "system"
+    "autoUpgrade"
+  ];
   cfg = config.system.autoUpgrade;
-
+  sourceOptions = [
+    "channel"
+    "flake"
+  ];
+  sourceOptionsSet = lib.filter (x: cfg.${x} != null) sourceOptions;
 in
 {
 
@@ -201,10 +209,12 @@ in
 
     assertions = [
       {
-        assertion = !((cfg.channel != null) && (cfg.flake != null));
-        message = ''
-          The options 'system.autoUpgrade.channel' and 'system.autoUpgrade.flake' cannot both be set.
-        '';
+        assertion = lib.length sourceOptionsSet <= 1;
+        message = lib.pipe sourceOptionsSet [
+          (map (x: lib.showAttrPath (myPath ++ [ x ])))
+          (builtins.concatStringsSep ", ")
+          (x: "Only one source option can be set at a time: ${x}")
+        ];
       }
       {
         assertion = (cfg.runGarbageCollection -> config.nix.enable);
