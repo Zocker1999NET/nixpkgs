@@ -292,51 +292,55 @@ in
           shutdown = "${config.systemd.package}/bin/shutdown";
           upgradeFlag = lib.optional cfg.upgrade "--upgrade";
         in
-        if cfg.allowReboot then
-          ''
-            ${nixos-rebuild} boot ${toString (cfg.flags ++ upgradeFlag)}
-            booted="$(${readlink} /run/booted-system/{initrd,kernel,kernel-modules})"
-            built="$(${readlink} /nix/var/nix/profiles/system/{initrd,kernel,kernel-modules})"
+        ''
+          ${
+            if cfg.allowReboot then
+              ''
+                ${nixos-rebuild} boot ${toString (cfg.flags ++ upgradeFlag)}
+                booted="$(${readlink} /run/booted-system/{initrd,kernel,kernel-modules})"
+                built="$(${readlink} /nix/var/nix/profiles/system/{initrd,kernel,kernel-modules})"
 
-            ${lib.optionalString (cfg.rebootWindow != null) ''
-              current_time="$(${date} +%H:%M)"
+                ${lib.optionalString (cfg.rebootWindow != null) ''
+                  current_time="$(${date} +%H:%M)"
 
-              lower="${cfg.rebootWindow.lower}"
-              upper="${cfg.rebootWindow.upper}"
+                  lower="${cfg.rebootWindow.lower}"
+                  upper="${cfg.rebootWindow.upper}"
 
-              if [[ "''${lower}" < "''${upper}" ]]; then
-                if [[ "''${current_time}" > "''${lower}" ]] && \
-                   [[ "''${current_time}" < "''${upper}" ]]; then
-                  do_reboot="true"
+                  if [[ "''${lower}" < "''${upper}" ]]; then
+                    if [[ "''${current_time}" > "''${lower}" ]] && \
+                       [[ "''${current_time}" < "''${upper}" ]]; then
+                      do_reboot="true"
+                    else
+                      do_reboot="false"
+                    fi
+                  else
+                    # lower > upper, so we are crossing midnight (e.g. lower=23h, upper=6h)
+                    # we want to reboot if cur > 23h or cur < 6h
+                    if [[ "''${current_time}" < "''${upper}" ]] || \
+                       [[ "''${current_time}" > "''${lower}" ]]; then
+                      do_reboot="true"
+                    else
+                      do_reboot="false"
+                    fi
+                  fi
+                ''}
+
+                if [ "''${booted}" = "''${built}" ]; then
+                  ${nixos-rebuild} ${cfg.operation} ${toString cfg.flags}
+                ${lib.optionalString (cfg.rebootWindow != null) ''
+                  elif [ "''${do_reboot}" != true ]; then
+                    echo "Outside of configured reboot window, skipping."
+                ''}
                 else
-                  do_reboot="false"
+                  ${shutdown} -r +1
                 fi
-              else
-                # lower > upper, so we are crossing midnight (e.g. lower=23h, upper=6h)
-                # we want to reboot if cur > 23h or cur < 6h
-                if [[ "''${current_time}" < "''${upper}" ]] || \
-                   [[ "''${current_time}" > "''${lower}" ]]; then
-                  do_reboot="true"
-                else
-                  do_reboot="false"
-                fi
-              fi
-            ''}
-
-            if [ "''${booted}" = "''${built}" ]; then
-              ${nixos-rebuild} ${cfg.operation} ${toString cfg.flags}
-            ${lib.optionalString (cfg.rebootWindow != null) ''
-              elif [ "''${do_reboot}" != true ]; then
-                echo "Outside of configured reboot window, skipping."
-            ''}
+              ''
             else
-              ${shutdown} -r +1
-            fi
-          ''
-        else
-          ''
-            ${nixos-rebuild} ${cfg.operation} ${toString (cfg.flags ++ upgradeFlag)}
-          '';
+              ''
+                ${nixos-rebuild} ${cfg.operation} ${toString (cfg.flags ++ upgradeFlag)}
+              ''
+          }
+        '';
 
       startAt = cfg.dates;
 
