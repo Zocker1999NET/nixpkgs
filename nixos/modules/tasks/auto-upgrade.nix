@@ -224,19 +224,21 @@ in
       }
     ];
 
-    system.autoUpgrade.flags = (
-      if cfg.flake == null then
-        [ "--no-build-output" ]
-        ++ lib.optionals (cfg.channel != null) [
-          "-I"
-          "nixpkgs=${cfg.channel}/nixexprs.tar.xz"
-        ]
-      else
-        [
-          "--refresh"
-          "--flake ${cfg.flake}"
-        ]
-    );
+    system.autoUpgrade = {
+      flags = (
+        if cfg.flake != null then
+          [
+            "--refresh"
+            "--flake ${cfg.flake}"
+          ]
+        else
+          [ "--no-build-output" ]
+          ++ lib.optionals (cfg.channel != null) [
+            "-I"
+            "nixpkgs=${cfg.channel}/nixexprs.tar.xz"
+          ]
+      );
+    };
 
     systemd.services.nixos-upgrade = {
       description = "NixOS Upgrade";
