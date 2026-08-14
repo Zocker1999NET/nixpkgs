@@ -233,6 +233,10 @@ in
           The option 'system.autoUpgrade.runGarbageCollection = true' requires 'nix.enable = true'.
         '';
       }
+      {
+        assertion = (cfg.upgrade -> config.nix.channel.enable);
+        message = "The option 'system.autoUpgrade.upgrade = true' requires 'nix.channel.enable = true' for updating the default 'nixos' channel.";
+      }
     ];
 
     system.autoUpgrade = {
