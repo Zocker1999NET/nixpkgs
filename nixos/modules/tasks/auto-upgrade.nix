@@ -13,8 +13,12 @@ let
   sourceOptions = [
     "channel"
     "flake"
+    "storePathProvider"
   ];
   sourceOptionsSet = lib.filter (x: cfg.${x} != null) sourceOptions;
+
+  # helpers
+  wrapString = wrapper: value: if lib.isString value then wrapper value else value;
 in
 {
 
@@ -67,6 +71,26 @@ in
           {command}`nix-channel` (run `nix-channel --list`
           to see the current value).
         '';
+      };
+
+      storePathProvider = lib.mkOption {
+        # str chosen as not mergeable by design, as script must return exactly one store path -> combined definition is not feasible
+        type = with lib.types; nullOr (either str package);
+        default = null;
+        apply = wrapString (pkgs.writeShellScriptBin "nixos-auto-upgrade-store-path");
+        description = ''
+          An executable that returns a NixOS system store path (of the toplevel closure) on stdout.
+
+          The upgrade service will run this executable (via {var}`lib.meta.getExe`),
+          then realize the returned store path via substitution,
+          and pass it to {command}`nixos-rebuild --store-path`.
+
+          This is useful when the NixOS configuration is evaluated and built on a remote build server,
+          so that clients may also skip the evaluation of their own configuration.
+
+          If a string is given, it is wrapped by {var}`pkgs.writeShellScriptBin`.
+        '';
+        example = lib.literalExpression "\${lib.getExe pkgs.curl} -s https://my-build-server.example.org/nixos-system-path";
       };
 
       upgrade = lib.mkOption {
@@ -246,6 +270,11 @@ in
             "--refresh"
             "--flake ${cfg.flake}"
           ]
+        else if cfg.storePathProvider != null then
+          [
+            # path cached in var to avoid multiple calls of provider, see defining code in script
+            ''--store-path "$store_path"''
+          ]
         else
           [ "--no-build-output" ]
           ++ lib.optionals (cfg.channel != null) [
@@ -286,6 +315,7 @@ in
 
       script =
         let
+          nix-store = "${config.nix.package}/bin/nix-store";
           nixos-rebuild = "${config.system.build.nixos-rebuild}/bin/nixos-rebuild";
           date = "${pkgs.coreutils}/bin/date";
           readlink = "${pkgs.coreutils}/bin/readlink";
@@ -293,6 +323,12 @@ in
           upgradeFlag = lib.optional cfg.upgrade "--upgrade";
         in
         ''
+          ${lib.optionalString (cfg.storePathProvider != null) ''
+            # cache in var to avoid multiple calls of provider
+            store_path="$(${lib.getExe cfg.storePathProvider})"
+            ${nix-store} --realize "$store_path"
+          ''}
+
           ${
             if cfg.allowReboot then
               ''
