@@ -22,6 +22,10 @@ let
 in
 {
 
+  meta.maintainers = with lib.maintainers; [
+    Zocker1999NET
+  ];
+
   options = {
 
     system.autoUpgrade = {
