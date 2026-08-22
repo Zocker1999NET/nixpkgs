@@ -250,6 +250,7 @@ in
   auth-mysql = runTest ./auth-mysql.nix;
   authelia = runTest ./authelia.nix;
   auto-cpufreq = runTest ./auto-cpufreq.nix;
+  auto-upgrade = import ./auto-upgrade { inherit runTest; };
   autobrr = runTest ./autobrr.nix;
   autopush-rs = runTest ./autopush-rs.nix;
   autosuspend = runTest ./autosuspend.nix;
